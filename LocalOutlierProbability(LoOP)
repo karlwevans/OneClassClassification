@@ -1,0 +1,40 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+def euclidean_distance(a, b):
+    return np.sqrt(np.sum((a - b) ** 2))
+
+def k_nearest_neighbors(X, point, k):
+    distances = np.array([euclidean_distance(x, point) for x in X])
+    return np.argsort(distances)[1:k + 1], distances[1:k + 1]  # Ignore self
+
+def local_density(X, point_idx, k):
+    neighbors, distances = k_nearest_neighbors(X, X[point_idx], k)
+    return np.mean(distances)
+
+def loop(X, k):
+    densities = np.array([local_density(X, i, k) for i in range(len(X))])
+    p_lof = np.zeros(len(X))
+    
+    for i in range(len(X)):
+        neighbors, _ = k_nearest_neighbors(X, X[i], k)
+        p_lof[i] = np.mean([densities[neighbor] for neighbor in neighbors]) / densities[i]
+        
+    prob_scores = 1 - np.exp(-p_lof ** 2 / 2)
+    return prob_scores
+
+np.random.seed(42)
+normal_data = np.random.normal(0, 1, (100, 2))
+outliers = np.random.uniform(low=-4, high=4, size=(5, 2))
+data = np.vstack((normal_data, outliers))
+
+k = 5
+prob_scores = loop(data, k)
+
+plt.scatter(data[:, 0], data[:, 1], c=prob_scores, cmap='coolwarm')
+plt.colorbar(label='Anomaly Probability')
+plt.title("Local Outlier Probability (LoOP)")
+plt.xlabel('Feature1')
+plt.ylabel('Feature2')
+plt.grid(lw=2,ls=':')
+plt.show()
