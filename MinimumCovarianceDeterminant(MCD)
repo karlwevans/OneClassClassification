@@ -1,0 +1,55 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+def covariance_matrix(X):
+    mean = np.mean(X, axis=0)
+    return np.cov((X - mean).T)
+
+def mahalanobis_distance(X, mean, cov_matrix):
+    inv_cov = np.linalg.inv(cov_matrix)
+    diffs = X - mean
+    return np.sqrt(np.diag(np.dot(np.dot(diffs, inv_cov), diffs.T)))
+
+# MCD implementation
+def mcd(X, h):
+    # here we randomly select subsets
+    np.random.seed(42)
+    best_det = float('inf')
+    best_subset = None
+    
+    # testing 100 random subsets of h points
+    for _ in range(100):
+        subset = X[np.random.choice(X.shape[0], h, replace=False)]
+        cov_matrix = covariance_matrix(subset)
+        det = np.linalg.det(cov_matrix)
+        if det < best_det:
+            best_det = det
+            best_subset = subset
+    
+    # finding the best subset's mean and covariance matrix
+    best_mean = np.mean(best_subset, axis=0)
+    best_cov = covariance_matrix(best_subset)
+    
+    # deriving the Mahalanobis distances for all points
+    distances = mahalanobis_distance(X, best_mean, best_cov)
+    return distances
+
+np.random.seed(42)
+normal_data = np.random.normal(0, 1, (100, 2))  # Normally distributed data
+outliers = np.random.multivariate_normal([5, 5], [[1, 0.5], [0.5, 1]], 5)  # Outliers
+data = np.vstack((normal_data, outliers))
+
+# apply MCD to detect outliers
+h = 75  # we use half the data points to estimate the covariance
+distances = mcd(data, h)
+
+# threshold to determine outliers (2 standard deviations away)
+threshold = np.percentile(distances, 97.5)
+outliers_pred = distances > threshold
+
+plt.scatter(data[:, 0], data[:, 1], c=outliers_pred, cmap='coolwarm')
+plt.title("Minimum Covariance Determinant (MCD) Outlier Detection")
+plt.xlabel('Feature1')
+plt.ylabel('Feature2')
+plt.grid(lw=2,ls=':')
+plt.show()
